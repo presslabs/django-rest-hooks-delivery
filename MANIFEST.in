@@ -1,0 +1,9 @@
+include AUTHORS
+include LICENSE
+include DESCRIPTION
+include CHANGELOG.txt
+include README.rst
+recursive-include rest_hooks_delivery/templates *
+recursive-include rest_hooks_delivery/static *
+graft rest_hooks_delivery
+global-exclude *.orig *.pyc *.log *.swp tags
