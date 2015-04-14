@@ -1,4 +1,4 @@
-from distutils.core import setup  # setuptools breaks
+from setuptools import setup
 
 version = __import__('rest_hooks_delivery').VERSION
 
@@ -10,13 +10,9 @@ setup(
     author='PressLabs',
     author_email='ping@presslabs.com',
     url='http://github.com/PressLabs/django-rest-hooks-delivery',
-    install_requires=['Django>=1.4', 'requests', 'django-jsonfield'],
+    install_requires=['Django>=1.7', 'requests', 'django-jsonfield'],
     packages=['rest_hooks_delivery'],
-    package_data={
-        'rest_hooks': [
-            'migrations/*.py'
-        ]
-    },
+    include_package_data=True,
     classifiers = ['Development Status :: 4 - Beta',
                    'Environment :: Web Environment',
                    'Framework :: Django',
