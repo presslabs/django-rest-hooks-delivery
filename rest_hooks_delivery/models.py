@@ -8,6 +8,19 @@ if HOOK_EVENTS is None:
     raise Exception('You need to define settings.HOOK_EVENTS!')
 AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 
+class StoredHook(models.Model):
+    target = models.URLField('Original target URL', max_length=255,
+                             editable=False, db_index=True)
+    event = models.CharField('Event', max_length=64, db_index=True,
+                             choices=[(e, e) for e in
+                                     sorted(HOOK_EVENTS.keys())],
+                             editable=False)
+    user = models.ForeignKey(AUTH_USER_MODEL, editable=False)
+    payload = models.TextField(editable=False)
+    hook = models.ForeignKey('rest_hooks.Hook', editable=False)
+
+    def __unicode__(self):
+        return u'%s [%s]' % (self.target, self.event)
 
 class FailedHook(models.Model):
     last_retry = models.DateTimeField(auto_now=True, editable=False,

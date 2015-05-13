@@ -13,6 +13,7 @@ setup(
     install_requires=['Django>=1.7', 'requests', 'django-jsonfield'],
     packages=['rest_hooks_delivery'],
     include_package_data=True,
+    zip_safe=False,
     classifiers = ['Development Status :: 4 - Beta',
                    'Environment :: Web Environment',
                    'Framework :: Django',
