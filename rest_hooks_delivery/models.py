@@ -3,6 +3,8 @@
 from django.conf import settings
 from django.db import models
 
+from django.utils import timezone
+
 HOOK_EVENTS = getattr(settings, 'HOOK_EVENTS', None)
 if HOOK_EVENTS is None:
     raise Exception('You need to define settings.HOOK_EVENTS!')
@@ -18,9 +20,14 @@ class StoredHook(models.Model):
     user = models.ForeignKey(AUTH_USER_MODEL, editable=False)
     payload = models.TextField(editable=False)
     hook = models.ForeignKey('rest_hooks.Hook', editable=False)
+    created_at = models.DateTimeField(default=timezone.now,
+                                   editable=False, db_index=True)
 
     def __unicode__(self):
         return u'%s [%s]' % (self.target, self.event)
+
+    class Meta:
+        ordering = ('-created_at',)
 
 class FailedHook(models.Model):
     last_retry = models.DateTimeField(auto_now=True, editable=False,

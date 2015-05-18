@@ -3,12 +3,12 @@ from __future__ import unicode_literals
 
 from django.db import models, migrations
 from django.conf import settings
+from django.utils import timezone
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('rest_hooks', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('rest_hooks_delivery', '0001_initial'),
     ]
@@ -23,6 +23,10 @@ class Migration(migrations.Migration):
                 ('payload', models.TextField(editable=False)),
                 ('hook', models.ForeignKey(to='rest_hooks.Hook', editable=False)),
                 ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, editable=False)),
+                ('created_at', models.DateTimeField(editable=False, db_index=True, default=timezone.now)),
             ],
+            options={
+                'ordering': ('-created_at',),
+            }
         ),
     ]
