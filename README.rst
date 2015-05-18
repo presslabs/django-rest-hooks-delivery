@@ -81,7 +81,7 @@ This deliverer tries to minimize server load by using Celery tasks to batch the 
 URL or by time.
 
 If this deliverer is selected, do not forget to start a celery worker for your
-project. Check the `Celery website<http://www.celeryproject.org/>`_ for an
+project. Check the `Celery website<http://www.celeryproject.org>`_ for an
 example. If this deliverer is set to batch by time, also start the Celery scheduler
 for your celery worker. An example of this can be found on the Celery website too.
 

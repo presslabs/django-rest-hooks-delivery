@@ -10,7 +10,7 @@ from django.conf import settings
 
 import requests, json
 
-BATCH_DELIVERER = 'rest_hooks_delivery.deliverers.batch_hooks'
+BATCH_DELIVERER = 'rest_hooks_delivery.deliverers.batch'
 HOOK_DELIVERER = getattr(settings, 'HOOK_DELIVERER', None)
 HOOK_DELIVERER_SETTINGS = getattr(settings, 'HOOK_DELIVERER_SETTINGS', None)
 
