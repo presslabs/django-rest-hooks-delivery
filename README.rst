@@ -81,13 +81,17 @@ This deliverer tries to minimize server load by using Celery tasks to batch the 
 URL or by time.
 
 If this deliverer is selected, do not forget to start a celery worker for your
-project. Check the `Celery website<http://www.celeryproject.org>`_ for an
+project. Check the `Celery <http://www.celeryproject.org>`_ website for an
 example. If this deliverer is set to batch by time, also start the Celery scheduler
 for your celery worker. An example of this can be found on the Celery website too.
 
 .. code-block:: python
 
     ### settings.py
+
+    from datetime import timedelta
+
+    ...
 
     INSTALLED_APPS = [
     ...
@@ -100,6 +104,16 @@ for your celery worker. An example of this can be found on the Celery website to
     HOOK_DELIVERER_SETTINGS = {
         'batch_by': 'size', # Choose either time or size
         'size': 3, # Number of hook events/target url to batch
-        'time': 10, # time in minutes
+        'time': 60, # time in seconds
         'retry': True, # Retry failed hook deliveries(True) or discard(False)
     }
+
+    CELERY_TIMEZONE = 'UTC'
+
+    if HOOK_DELIVERER_SETTINGS['batch_by'] == 'time':
+        CELERYBEAT_SCHEDULE = {
+            'add-time_batch-task': {
+                'task': 'rest_hooks_delivery.tasks.time_batch',
+                'schedule': timedelta(seconds=HOOK_DELIVERER_SETTINGS['time']),
+            }
+        }
