@@ -42,6 +42,13 @@ def store_hook(*args, **kwargs):
         if current_count >= HOOK_DELIVERER_SETTINGS['size']:
             batch_and_send(target_url)
 
+@shared_task
+def time_batch():
+    urls = StoredHook.objects.order_by('target').\
+        values_list('target', flat=True).distinct()
+    for url in urls:
+        batch_and_send(url)
+
 def batch_and_send(target_url):
     events = StoredHook.objects.filter(target=target_url)
     batch_data_list = []
