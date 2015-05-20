@@ -4,6 +4,8 @@ from __future__ import absolute_import
 
 from celery import shared_task
 
+from celery.task import current
+
 from rest_hooks_delivery.models import StoredHook
 
 from django.conf import settings
@@ -34,30 +36,64 @@ def store_hook(*args, **kwargs):
         hook_id=hook
     )
 
+    current_count = None
+
+    # If first in queue and batching by time
+    if 'time' in HOOK_DELIVERER_SETTINGS['batch_by']:
+        current_count = event_count_for(target_url)
+        if current_count == 1:
+            batch_and_send.apply_async(args=(target_url,),
+                countdown=HOOK_DELIVERER_SETTINGS['time'],
+                link_error=fail_handler.s(target_url))
+    
     if 'size' in HOOK_DELIVERER_SETTINGS['batch_by']:
         # check size for current target
-        current_count = StoredHook.objects.filter(target=target_url).count()
+        if current_count is None:
+            current_count = event_count_for(target_url)
 
         # (>=) because if retry is True then count can be > size
         if current_count >= HOOK_DELIVERER_SETTINGS['size']:
             batch_and_send(target_url)
 
-@shared_task
-def time_batch():
-    urls = StoredHook.objects.order_by('target').\
-        values_list('target', flat=True).distinct()
-    for url in urls:
-        batch_and_send(url)
 
-def batch_and_send(target_url):
+def event_count_for(target_url):
     events = StoredHook.objects.filter(target=target_url)
-    batch_data_list = []
-    for event in events:
-        batch_data_list.append(event.payload)
-    r = requests.post(
-        target_url,
-        data=json.dumps(batch_data_list),
-        headers={'Content-Type': 'application/json'})
-    if (r.status_code > 299 and not HOOK_DELIVERER_SETTINGS['retry']) or\
-        (r.status_code < 300):
-        events.delete()
+    return events.count()
+
+@shared_task
+def fail_handler(uuid, target_url):
+    events = StoredHook.objects.filter(target=target_url)
+    events.delete()
+
+@shared_task
+def batch_and_send(target_url):
+    events = None
+    try:
+        events = StoredHook.objects.filter(target=target_url)
+        batch_data_list = []
+        for event in events:
+            batch_data_list.append(event.payload)
+        r = requests.post(
+            target_url,
+            data=json.dumps(batch_data_list),
+            headers={'Content-Type': 'application/json'})
+        if (r.status_code > 299 and not HOOK_DELIVERER_SETTINGS['retry']) or\
+            (r.status_code < 300):
+            events.delete()
+        elif (r.status_code > 299 and HOOK_DELIVERER_SETTINGS['retry']):
+            if current.request.retries == HOOK_DELIVERER_SETTINGS['retries']:
+                events.delete()
+            else:
+                raise batch_and_send.retry(
+                    args=(target_url,),
+                    countdown=HOOK_DELIVERER_SETTINGS['time'])
+    except requests.exceptions.ConnectionError as exc:
+        if HOOK_DELIVERER_SETTINGS['retry']:
+            if current.request.retries == HOOK_DELIVERER_SETTINGS['retries']:
+                events.delete()
+            else:
+                raise batch_and_send.retry(
+                    args=(target_url,), exc=exc,
+                    countdown=HOOK_DELIVERER_SETTINGS['time'])
+        else:
+            events.delete()

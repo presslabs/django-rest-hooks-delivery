@@ -78,24 +78,56 @@ It also provides a management command useful for retrying failed hooks.
 To use the batch deliverer:
 
 This deliverer tries to minimize server load by using Celery tasks to batch the
-hook deliveries. It can batch the deliveries by number of deliveries per target
-URL and by time. You can choose one of the batching modes or use both. When
-both modes are selected the deliverer will batch by whichever mode occurs
-first.
+hook deliveries. This deliverer operates on a per target URL basis. Everything
+explained in the rest of this section assumes this. The deliverer has 2 modes.
+
+size
+`````
+In size mode the deliverer will check the :code:`size` setting and batch the
+hooks whenever they reach the specified size.
+
+time
+`````
+In time mode the deliverer will trigger a delayed batching of hooks. It will
+read the time to delay from the :code:`time` setting. This delayed batching
+is triggered when the first hook for a target URL is sent to the deliverer.
+
+mixed
+``````
+The time and size modes can be mixed. The deliverer will batch by whichever
+event comes first. To use this mode, list both the size and time modes in
+the :code:`batch_by` setting. See below for example.
+
+
+Note: It is important to use caution when choosing the configuration values
+for the deliverer as this can lead to resource misuse when not done properly.
 
 If this deliverer is selected, do not forget to start a celery worker for your
-project. Check the `Celery <http://www.celeryproject.org>`_ website for an
-example. If this deliverer is set to batch by time, also start the Celery
-scheduler for your celery worker. An example of this can be found on the Celery
-website too.
+project.
 
-Carefully copy the code below.
+retry
+``````
+This deliverer can also retry failed deliveries. When retry is True the
+deliverer will retry failed deliveries every :code:`time` seconds until either
+successful or :code:`retries` retries have failed, at which point it will give
+up. When the deliverer gives up it will discard all failed hooks for the
+current target URL.
+
+.. code-block:: bash
+
+    celery -A proj worker -l info
+
+where proj is the name of your project.
+
+Check the `Celery <http://www.celeryproject.org>`_ website for a detailed
+example.
+
+Example
+________
 
 .. code-block:: python
 
     ### settings.py
-
-    from datetime import timedelta
 
     ...
 
@@ -111,16 +143,8 @@ Carefully copy the code below.
         'batch_by': ['time','size'], # List of batching modes
         # can be ['time'], ['size'] or ['size', 'time']
         'size': 3, # Number of hook events/target url to batch
-        'time': 60, # time in seconds
+        'time': 60, # time to delay batching for target URL(in seconds)
         'retry': True, # Retry failed hook deliveries(True) or discard(False)
+        # Compulsory if retry is True
+        'retries': 2, # Number of times to retry failed deliveries
     }
-
-    CELERY_TIMEZONE = 'UTC'
-
-    if 'time' in HOOK_DELIVERER_SETTINGS['batch_by']:
-        CELERYBEAT_SCHEDULE = {
-            'add-time_batch-task': {
-                'task': 'rest_hooks_delivery.tasks.time_batch',
-                'schedule': timedelta(seconds=HOOK_DELIVERER_SETTINGS['time']),
-            }
-        }
