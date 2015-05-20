@@ -113,7 +113,7 @@ successful or :code:`retries` retries have failed, at which point it will give
 up. When the deliverer gives up it will discard all failed hooks for the
 current target URL.
 
-Don't forget to start a celery work for your project:
+Don't forget to start a celery worker for your project:
 
 .. code-block:: bash
 
