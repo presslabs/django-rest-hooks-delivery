@@ -34,7 +34,7 @@ def store_hook(*args, **kwargs):
         hook_id=hook
     )
 
-    if HOOK_DELIVERER_SETTINGS['batch_by'] is 'size':
+    if 'size' in HOOK_DELIVERER_SETTINGS['batch_by']:
         # check size for current target
         current_count = StoredHook.objects.filter(target=target_url).count()
 

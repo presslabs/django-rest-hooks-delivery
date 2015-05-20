@@ -77,13 +77,19 @@ It also provides a management command useful for retrying failed hooks.
 
 To use the batch deliverer:
 
-This deliverer tries to minimize server load by using Celery tasks to batch the hook deliveries. It can batch the deliveries by either number of deliveries per target
-URL or by time.
+This deliverer tries to minimize server load by using Celery tasks to batch the
+hook deliveries. It can batch the deliveries by number of deliveries per target
+URL and by time. You can choose one of the batching modes or use both. When
+both modes are selected the deliverer will batch by whichever mode occurs
+first.
 
 If this deliverer is selected, do not forget to start a celery worker for your
 project. Check the `Celery <http://www.celeryproject.org>`_ website for an
-example. If this deliverer is set to batch by time, also start the Celery scheduler
-for your celery worker. An example of this can be found on the Celery website too.
+example. If this deliverer is set to batch by time, also start the Celery
+scheduler for your celery worker. An example of this can be found on the Celery
+website too.
+
+Carefully copy the code below.
 
 .. code-block:: python
 
@@ -102,7 +108,8 @@ for your celery worker. An example of this can be found on the Celery website to
     HOOK_DELIVERER = 'rest_hooks_delivery.deliverers.batch'
 
     HOOK_DELIVERER_SETTINGS = {
-        'batch_by': 'size', # Choose either time or size
+        'batch_by': ['time','size'], # List of batching modes
+        # can be ['time'], ['size'] or ['size', 'time']
         'size': 3, # Number of hook events/target url to batch
         'time': 60, # time in seconds
         'retry': True, # Retry failed hook deliveries(True) or discard(False)
@@ -110,7 +117,7 @@ for your celery worker. An example of this can be found on the Celery website to
 
     CELERY_TIMEZONE = 'UTC'
 
-    if HOOK_DELIVERER_SETTINGS['batch_by'] == 'time':
+    if 'time' in HOOK_DELIVERER_SETTINGS['batch_by']:
         CELERYBEAT_SCHEDULE = {
             'add-time_batch-task': {
                 'task': 'rest_hooks_delivery.tasks.time_batch',
