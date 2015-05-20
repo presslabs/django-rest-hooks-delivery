@@ -4,8 +4,6 @@ from __future__ import absolute_import
 
 from celery import shared_task
 
-from celery.task import current
-
 from rest_hooks_delivery.models import StoredHook
 
 from django.conf import settings
@@ -81,7 +79,8 @@ def batch_and_send(target_url):
             (r.status_code < 300):
             events.delete()
         elif (r.status_code > 299 and HOOK_DELIVERER_SETTINGS['retry']):
-            if current.request.retries == HOOK_DELIVERER_SETTINGS['retries']:
+            if batch_and_send.request.retries == \
+                HOOK_DELIVERER_SETTINGS['retries']:
                 events.delete()
             else:
                 raise batch_and_send.retry(
@@ -89,7 +88,8 @@ def batch_and_send(target_url):
                     countdown=HOOK_DELIVERER_SETTINGS['time'])
     except requests.exceptions.ConnectionError as exc:
         if HOOK_DELIVERER_SETTINGS['retry']:
-            if current.request.retries == HOOK_DELIVERER_SETTINGS['retries']:
+            if batch_and_send.request.retries == \
+                HOOK_DELIVERER_SETTINGS['retries']:
                 events.delete()
             else:
                 raise batch_and_send.retry(
