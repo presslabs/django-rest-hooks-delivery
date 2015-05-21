@@ -37,21 +37,23 @@ def store_hook(*args, **kwargs):
     current_count = None
 
     # If first in queue and batching by time
-    if 'time' in HOOK_DELIVERER_SETTINGS['batch_by']:
+    if 'time' in HOOK_DELIVERER_SETTINGS:
         current_count = event_count_for(target_url)
         if current_count == 1:
             batch_and_send.apply_async(args=(target_url,),
                 countdown=HOOK_DELIVERER_SETTINGS['time'],
                 link_error=fail_handler.s(target_url))
     
-    if 'size' in HOOK_DELIVERER_SETTINGS['batch_by']:
+    if 'size' in HOOK_DELIVERER_SETTINGS:
         # check size for current target
         if current_count is None:
             current_count = event_count_for(target_url)
 
         # (>=) because if retry is True then count can be > size
         if current_count >= HOOK_DELIVERER_SETTINGS['size']:
-            batch_and_send(target_url)
+            batch_and_send.apply_async(args=(target_url,),
+                countdown=0,
+                link_error=fail_handler.s(target_url))
 
 
 def event_count_for(target_url):
@@ -75,25 +77,27 @@ def batch_and_send(target_url):
             target_url,
             data=json.dumps(batch_data_list),
             headers={'Content-Type': 'application/json'})
-        if (r.status_code > 299 and not HOOK_DELIVERER_SETTINGS['retry']) or\
+        if (r.status_code > 299 and not 'retry' in HOOK_DELIVERER_SETTINGS) or\
             (r.status_code < 300):
             events.delete()
-        elif (r.status_code > 299 and HOOK_DELIVERER_SETTINGS['retry']):
+        elif (r.status_code > 299 and 'retry' in HOOK_DELIVERER_SETTINGS):
             if batch_and_send.request.retries == \
-                HOOK_DELIVERER_SETTINGS['retries']:
+                HOOK_DELIVERER_SETTINGS['retry']['retries']:
                 events.delete()
             else:
                 raise batch_and_send.retry(
                     args=(target_url,),
-                    countdown=HOOK_DELIVERER_SETTINGS['time'])
+                    countdown=\
+                        HOOK_DELIVERER_SETTINGS['retry']['retry_interval'])
     except requests.exceptions.ConnectionError as exc:
-        if HOOK_DELIVERER_SETTINGS['retry']:
+        if 'retry' in HOOK_DELIVERER_SETTINGS:
             if batch_and_send.request.retries == \
-                HOOK_DELIVERER_SETTINGS['retries']:
+                HOOK_DELIVERER_SETTINGS['retry']['retries']:
                 events.delete()
             else:
                 raise batch_and_send.retry(
                     args=(target_url,), exc=exc,
-                    countdown=HOOK_DELIVERER_SETTINGS['time'])
+                    countdown=\
+                        HOOK_DELIVERER_SETTINGS['retry']['retry_interval'])
         else:
             events.delete()

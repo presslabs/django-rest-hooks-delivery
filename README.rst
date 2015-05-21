@@ -50,8 +50,8 @@ unmigrated application. You have to make sure that the `django rest hooks
 Make sure you have added :code:`rest_hooks_delivery` to the list of
 :code:`INSTALLED_APPS` before :code:`django.contrib.admin` and that you have
 set :code:`HOOK_DELIVERER` to one of the available deliverers. Currently
-:code:`rest_hooks_delivery.deliverers.batch` and 
-:code:`rest_hooks_delivery.deliverers.retry` are available.
+:code:`rest_hooks_delivery.deliverers.retry` and 
+:code:`rest_hooks_delivery.deliverers.batch` are available.
 
 To use the retry deliverer:
 
@@ -83,20 +83,45 @@ explained in the rest of this section assumes this. The deliverer has 2 modes.
 
 size
 `````
+.. code-block:: python
+
+  HOOK_DELIVERER_SETTINGS = {
+      ...
+      'size': 3, # Number of hook events per target URL
+      ...
+  }
+
 In size mode the deliverer will check the :code:`size` setting and batch the
 hooks whenever they reach the specified size.
 
 time
 `````
+.. code-block:: python
+  
+  HOOK_DELIVERER_SETTINGS = {
+      ...
+      'time': 60, # Time to delay batching hook events for target URL(seconds)
+      ...
+  }
+
 In time mode the deliverer will trigger a delayed batching of hooks. It will
 read the time to delay from the :code:`time` setting. This delayed batching
 is triggered when the first hook for a target URL is sent to the deliverer.
 
 mixed
 ``````
+.. code-block:: python
+  
+  HOOK_DELIVERER_SETTINGS = {
+      ...
+      'time': 60,
+      'size': 5,
+      ...
+  }
+
 The time and size modes can be mixed. The deliverer will batch by whichever
-event comes first. To use this mode, list both the size and time modes in
-the :code:`batch_by` setting. See below for example.
+event occurs first. To use this mode, provide both the time and size settings.
+The order of the settings in the configuration dictionary does not matter.
 
 
 Note: It is important to use caution when choosing the configuration values
@@ -105,24 +130,34 @@ for the deliverer as this can lead to resource misuse when not done properly.
 If this deliverer is selected, do not forget to start a celery worker for your
 project.
 
-retry
-``````
-This deliverer can also retry failed deliveries. When retry is True the
-deliverer will retry failed deliveries every :code:`time` seconds until either
-successful or :code:`retries` retries have failed, at which point it will give
-up. When the deliverer gives up it will discard all failed hooks for the
-current target URL.
-
-Don't forget to start a celery worker for your project:
-
 .. code-block:: bash
-
-    celery -A proj worker -l info
+  
+  celery -A proj worker -l info
 
 where proj is the name of your project.
 
 Check the `Celery <http://www.celeryproject.org>`_ website for a detailed
 example.
+
+retry
+``````
+.. code-block:: python
+  
+  HOOK_DELIVERER_SETTINGS = {
+      ...
+      'retry': {
+          'retries': 2, # Number of times to retry failed deliveries
+          'retry_interval': 5, # Time to delay between retries(seconds)
+      }
+      ...
+  }
+
+This deliverer can also retry failed deliveries. When the :code:`retry` setting
+is provided the deliverer will retry failed deliveries every
+:code:`retry_interval` seconds until either successful or :code:`retries`
+retries have failed, at which point it will give up. When the deliverer gives
+up it will discard all failed hooks for the current target URL. If this setting
+is not provided the deliverer will discard failed deliveries.
 
 Example
 ________
@@ -142,11 +177,11 @@ ________
     HOOK_DELIVERER = 'rest_hooks_delivery.deliverers.batch'
 
     HOOK_DELIVERER_SETTINGS = {
-        'batch_by': ['time','size'], # List of batching modes
-        # can be ['time'], ['size'] or ['size', 'time']
-        'size': 3, # Number of hook events/target url to batch
-        'time': 60, # time to delay batching for target URL(in seconds)
-        'retry': True, # Retry failed hook deliveries(True) or discard(False)
-        # Compulsory if retry is True
-        'retries': 2, # Number of times to retry failed deliveries
+        'size': 3,
+        'time': 60,
+        # You can comment out the mode you do not need above
+        'retry': {
+            'retries': 2,
+            'retry_interval': 5,
+        }
     }
