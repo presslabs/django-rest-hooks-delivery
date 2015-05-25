@@ -107,11 +107,14 @@ class Client(object):
 
 client = Client()
 
+def data_handler(obj):
+    return obj.isoformat() if hasattr(obj, 'isoformat') else obj
+
 
 def retry(target, payload, instance=None, hook=None, cleanup=False, **kwargs):
     client.post(
         url=target,
-        data=json.dumps(payload) if not isinstance(payload, str) else
+        data=json.dumps(payload, default=data_handler) if not isinstance(payload, str) else
              payload,
         headers={'Content-Type': 'application/json'},
         _hook_id=hook.pk,
@@ -123,7 +126,7 @@ def retry(target, payload, instance=None, hook=None, cleanup=False, **kwargs):
 def batch(target, payload, instance=None, hook=None, cleanup=False, **kwargs):
     store_hook.delay(
         url=target,
-        data=json.dumps(payload) if not isinstance(payload, str) else
+        data=json.dumps(payload, default=data_handler) if not isinstance(payload, str) else
              payload,
         _hook_id=hook.pk,
         _hook_event=hook.event,
