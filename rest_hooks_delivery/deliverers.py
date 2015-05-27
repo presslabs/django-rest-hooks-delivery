@@ -7,6 +7,7 @@ import threading
 import requests
 
 from django.db.models import F
+from django.core.serializers.json import DjangoJSONEncoder
 
 from rest_hooks_delivery.models import FailedHook
 from rest_hooks_delivery.tasks import store_hook
@@ -107,15 +108,11 @@ class Client(object):
 
 client = Client()
 
-def data_handler(obj):
-    return obj.isoformat() if hasattr(obj, 'isoformat') else obj
-
-
 def retry(target, payload, instance=None, hook=None, cleanup=False, **kwargs):
     client.post(
         url=target,
-        data=json.dumps(payload, default=data_handler) if not isinstance(payload, str) else
-             payload,
+        data=json.dumps(payload, cls=DjangoJSONEncoder)\
+          if not isinstance(payload, str) else payload,
         headers={'Content-Type': 'application/json'},
         _hook_id=hook.pk,
         _hook_event=hook.event,
@@ -126,8 +123,8 @@ def retry(target, payload, instance=None, hook=None, cleanup=False, **kwargs):
 def batch(target, payload, instance=None, hook=None, cleanup=False, **kwargs):
     store_hook.delay(
         url=target,
-        data=json.dumps(payload, default=data_handler) if not isinstance(payload, str) else
-             payload,
+        data=json.dumps(payload, cls=DjangoJSONEncoder)\
+          if not isinstance(payload, str) else payload,
         _hook_id=hook.pk,
         _hook_event=hook.event,
         _hook_user_id=hook.user.pk

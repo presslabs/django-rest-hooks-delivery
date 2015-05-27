@@ -7,6 +7,7 @@ from celery import shared_task
 from rest_hooks_delivery.models import StoredHook
 
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 
 import requests, json
 
@@ -75,7 +76,7 @@ def batch_and_send(target_url):
             batch_data_list.append(event.payload)
         r = requests.post(
             target_url,
-            data=json.dumps(batch_data_list),
+            data=json.dumps(batch_data_list, cls=DjangoJSONEncoder),
             headers={'Content-Type': 'application/json'})
         if (r.status_code > 299 and not 'retry' in HOOK_DELIVERER_SETTINGS) or\
             (r.status_code < 300):
