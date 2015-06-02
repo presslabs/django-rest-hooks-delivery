@@ -1,0 +1,7 @@
+Django==1.8
+-e git+https://github.com/meric/django-contrib-comments.git@django-1.9#egg=django_contrib_comments
+requests==1.2.3
+mock==1.0.1
+-e git+https://github.com/meric/django-rest-hooks.git@python-3-django-1.8#egg=rest_hooks
+celery==3.1.18
+redis==2.10.1
