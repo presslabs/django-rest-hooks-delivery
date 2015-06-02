@@ -37,10 +37,6 @@ class SizeBatchTest(TestCase):
     #############
 
     def setUp(self):
-        #self.HOOK_EVENTS = getattr(settings, 'HOOKS_EVENTS', None)
-        #self.HOOK_DELIVERER = getattr(settings, 'HOOK_DELIVERER', None)
-        #self.HOOK_DELIVERER_SETTINGS = \
-        #    getattr(settings, 'HOOK_DELIVERER_SETTINGS', None)
         self.client = requests # force non-async for test cases
 
         self.user = User.objects.create_user('bob', 'bob@example.com', 'password')
@@ -50,14 +46,9 @@ class SizeBatchTest(TestCase):
             'comment.added':      'django_comments.Comment.created',
         }
 
-        #settings.HOOK_DELIVERER = 'rest_hooks_delivery.deliverers.batch'
-
         app = Celery('rest_hooks_delivery_tests')
         app.config_from_object('django.conf:settings')
 
-    #def tearDown(self):
-        #settings.HOOK_DELIVERER = self.HOOK_DELIVERER
-        #settings.HOOK_DELIVERER_SETTINGS = self.HOOK_DELIVERER_SETTINGS
 
     def make_hook(self, event, target):
         return Hook.objects.create(
@@ -103,7 +94,77 @@ class SizeBatchTest(TestCase):
         payload = json.loads(method_mock.call_args_list[0][1]['data'])
 
         # correct payload is delivered to target
-        self.assertEquals(len(payload), settings.HOOK_DELIVERER_SETTINGS['size'])
+        self.assertEquals(len(payload), test_size)
 
         # hooks cleared after delivery
         self.assertEquals(StoredHook.objects.all().count(), 0)
+
+    @patch('requests.post', autospec=True)
+    @override_settings(HOOK_DELIVERER_SETTINGS={'time': 7})
+    def test_batching_by_time(self, method_mock):
+        # this test assumes all test_comments can be created within test_time
+        # it won't matter because of CELERY_ALWAYS_EAGER setting
+        # This causes celery to not wait
+        # Indication of a passing test will be all the events sent immediately
+        test_time = 7
+        test_comments = 2
+
+        method_mock.return_value = HttpResponse()
+
+        target = 'http://example.com/test_batching_by_time'
+        hook = self.make_hook('comment.added', target)
+
+        comment_strings = ['test comment' for x in range(0, test_comments)]
+
+        comments = [Comment.objects.create(
+            site=self.site,
+            content_object=self.user,
+            user=self.user,
+            comment=comment) for comment in comment_strings
+        ]
+
+        payloads = [json.loads(args[1]['data']) for args in \
+            method_mock.call_args_list]
+
+        # payload contains all comments
+        self.assertEquals(len(payloads), len(comments))
+
+        # hooks cleared after delivery
+        self.assertEquals(StoredHook.objects.all().count(), 0)
+
+    @patch('requests.post', autospec=True)
+    @override_settings(HOOK_DELIVERER_SETTINGS={
+    	'size': 5,
+    	'retry': {
+            'retries': 2,
+            'retry_interval': 5
+    	}
+    })
+    def test_retrying_failed_deliveries(self, method_mock):
+        test_size = 5
+
+        method_mock.return_value = HttpResponseBadRequest()
+
+        target = 'http://example.com/test_retrying_failed_deliveries'
+        hook = self.make_hook('comment.added', target)
+
+        comment_strings = ['test comment' for x in range(0, test_size)]
+
+        comments = [Comment.objects.create(
+            site=self.site,
+            content_object=self.user,
+            user=self.user,
+            comment=comment) for comment in comment_strings
+        ]
+
+        payloads = [json.loads(args_list[1]['data']) for args_list in \
+            method_mock.call_args_list]
+
+        # 3 payloads because of 2 retries
+        self.assertEquals(len(payloads), 3)
+
+        # each payload has all comments
+        # note that in practise this can be > size
+        # if more comments were added since a fail
+        for payload in payloads:
+            self.assertEquals(len(payload), 5)

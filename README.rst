@@ -77,9 +77,10 @@ It also provides a management command useful for retrying failed hooks.
 
 To use the batch deliverer:
 
-This deliverer tries to minimize server load by using Celery tasks to batch the
-hook deliveries. This deliverer operates on a per target URL basis. Everything
-explained in the rest of this section assumes this. The deliverer has 2 modes.
+This deliverer tries to minimize server load by using Celery + Redis tasks to
+batch the hook deliveries. This deliverer operates on a per target URL basis.
+Everything explained in the rest of this section assumes this.
+The deliverer has 2 modes.
 
 size
 `````
@@ -127,12 +128,16 @@ The order of the settings in the configuration dictionary does not matter.
 Note: It is important to use caution when choosing the configuration values
 for the deliverer as this can lead to resource misuse when not done properly.
 
-If this deliverer is selected, do not forget to start a celery worker for your
-project.
+If this deliverer is selected, do not forget to start a celery worker and a redis
+instance for your project.
 
 .. code-block:: bash
   
   celery -A proj worker -l info
+
+.. code-block:: bash
+
+  redis-server
 
 where proj is the name of your project.
 
