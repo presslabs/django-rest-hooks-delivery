@@ -82,7 +82,7 @@ def batch_and_send(target_url):
                 events = StoredHook.objects.filter(target=target_url)
                 batch_data_list = []
                 for event in events:
-                    batch_data_list.append(event.payload)
+                    batch_data_list.append(json.loads(event.payload))
 
                 if len(batch_data_list):
                     r = requests.post(
