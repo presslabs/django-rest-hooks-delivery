@@ -5,7 +5,7 @@ from django.contrib import admin, messages
 from django.db.models import F
 from rest_hooks.utils import get_module
 
-from rest_hooks_delivery.models import FailedHook
+from rest_hooks_delivery.models import FailedHook, StoredHook
 
 
 def retry_hook(modeladmin, request, queryset):
@@ -45,4 +45,17 @@ class FailedHookAdmin(admin.ModelAdmin):
     valid.boolean = True
 
 
+class StoredHookAdmin(admin.ModelAdmin):
+    list_display = ('target', 'event', 'user', 'created_at')
+
+    readonly_fields = ('target', 'event', 'user', 'payload', 'created_at')
+
+    list_filter = ('target', 'event', 'created_at')
+
+    filter_horizontal = ()
+
+    def has_add_permission(self, request):
+        return False
+
 admin.site.register(FailedHook, FailedHookAdmin)
+admin.site.register(StoredHook, StoredHookAdmin)
