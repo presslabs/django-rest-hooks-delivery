@@ -5,7 +5,8 @@ from django.contrib import admin, messages
 from django.db.models import F
 from rest_hooks.utils import get_module
 
-from rest_hooks_delivery.models import FailedHook
+from rest_hooks_delivery.models import FailedHook, StoredHook
+from rest_hooks_delivery.deliverers import retry
 
 
 def retry_hook(modeladmin, request, queryset):
@@ -26,6 +27,13 @@ def retry_hook(modeladmin, request, queryset):
     modeladmin.message_user(request, "Retried %d failed webhooks" % count)
 retry_hook.short_description = "Retry selected hooks"
 
+def deliver_hook_event(modeladmin, request, queryset):
+    for hook in queryset.filter(target=F('target'),
+                                event=F('event'),
+                                user_id=F('user_id')):
+        retry(hook.target, hook.payload, hook=hook.hook, cleanup=True)
+        hook.delete()
+deliver_hook_event.short_description = "Deliver selected hook events"
 
 class FailedHookAdmin(admin.ModelAdmin):
     list_display = ('__unicode__', 'event', 'user', 'last_status',
@@ -45,4 +53,19 @@ class FailedHookAdmin(admin.ModelAdmin):
     valid.boolean = True
 
 
+class StoredHookAdmin(admin.ModelAdmin):
+    list_display = ('target', 'event', 'user', 'created_at')
+
+    readonly_fields = ('target', 'event', 'user', 'payload', 'created_at')
+
+    list_filter = ('target', 'event', 'created_at')
+
+    filter_horizontal = ()
+
+    actions = (deliver_hook_event,)
+
+    def has_add_permission(self, request):
+        return False
+
 admin.site.register(FailedHook, FailedHookAdmin)
+admin.site.register(StoredHook, StoredHookAdmin)
