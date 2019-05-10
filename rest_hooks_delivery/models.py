@@ -12,9 +12,9 @@ AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 class FailedHook(models.Model):
     last_retry = models.DateTimeField(auto_now=True, editable=False,
                                       db_index=True)
-    target = models.URLField('Original target URL', max_length=255,
+    target = models.URLField('original target URL', max_length=255,
                              editable=False, db_index=True)
-    event = models.CharField('Event', max_length=64, db_index=True,
+    event = models.CharField(max_length=64, db_index=True,
                              choices=[(e, e) for e in
                                       sorted(HOOK_EVENTS.keys())],
                              editable=False)
@@ -34,4 +34,3 @@ class FailedHook(models.Model):
 
     class Meta:
         ordering = ('-last_retry',)
-        unique_together = (('target', 'event', 'user', 'hook'),)

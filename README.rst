@@ -5,20 +5,19 @@ Various deliverers for `django rest hooks
 <https://github.com/zapier/django-rest-hooks>`_ and `django rest hooks ng
 <https://github.com/PressLabs/django-rest-hooks-ng>`_.
 
+Forked from `presslabs/django-rest-hooks-delivery
+<https://github.com/presslabs/django-rest-hooks-delivery>`_ to add backoff algorithm,
+emails on final attempt, and to allow multiple failed instances per hook (by typing it 
+to the model instance, not the hook).
+
 Installation
 ------------
-
-To get the latest stable release from PyPi
-
-.. code-block:: bash
-
-    pip install django-rest-hooks-delivery
 
 To get the latest commit from GitHub
 
 .. code-block:: bash
 
-    pip install -e git+git://github.com/PressLabs/django-rest-hooks-delivery.git#egg=rest_hooks_delivery
+    pip install -e git+git://github.com/CompostNow/django-rest-hooks-delivery.git#egg=rest_hooks_delivery
 
 Add ``rest_hooks_delivery`` to your ``INSTALLED_APPS``
 

@@ -6,7 +6,10 @@ import threading
 
 import requests
 
+from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import F
+from rest_hooks.utils import get_module
 
 from rest_hooks_delivery.models import FailedHook
 
@@ -66,16 +69,53 @@ class Client(object):
             hook_id = kwargs.pop('_hook_id')
             hook_event = kwargs.pop('_hook_event')
             hook_user_id = kwargs.pop('_hook_user_id')
-            cleanup = kwargs.pop('_cleanup')
-            r = getattr(requests, method)(*args, **kwargs)
-            payload = kwargs.get('data', '{}')
-            if r.status_code > 299:
-                try:
-                    failed_hook = FailedHook.objects.get(target=r.request.url,
-                                                         event=hook_event,
-                                                         user_id=hook_user_id,
-                                                         hook_id=hook_id)
-                    failed_hook.payload = payload
+            failed_hook = kwargs.pop('_failed_hook')
+
+            try:
+                r = None
+                r = getattr(requests, method)(*args, **kwargs)
+                payload = kwargs.get('data', '{}')
+                if r.status_code > 299:
+                    
+                    if failed_hook:
+                        if failed_hook.retries == 5:
+                            # send email after several failed attempts, 
+                            # so that the issue can be investigated
+                            r.raise_for_status()
+
+                        failed_hook.response_headers = {k: r.headers[k] for k in
+                                                        r.headers.iterkeys()}
+                        failed_hook.response_body = r.content
+                        failed_hook.last_status = r.status_code
+                        failed_hook.retries = F('retries') + 1
+                        failed_hook.save()
+
+                    else:
+                        FailedHook.objects.create(
+                            target=r.request.url,
+                            payload=payload,
+                            response_headers={k: r.headers[k]
+                                              for k in r.headers.iterkeys()},
+                            response_body=r.content,
+                            last_status=r.status_code,
+                            event=hook_event,
+                            user_id=hook_user_id,
+                            hook_id=hook_id
+                        )
+
+                elif failed_hook:
+                    failed_hook.delete()
+
+                self.total_sent += 1
+
+            except (requests.exceptions.HTTPError, requests.exceptions.Timeout, 
+                requests.exceptions.RequestException, requests.exceptions.SSLError) as e:
+
+                send_mail = False
+
+                # record failed hook for retrying
+                if failed_hook:
+                    send_mail = failed_hook.retries == 5
                     failed_hook.response_headers = {k: r.headers[k] for k in
                                                     r.headers.iterkeys()}
                     failed_hook.response_body = r.content
@@ -83,38 +123,53 @@ class Client(object):
                     failed_hook.retries = F('retries') + 1
                     failed_hook.save()
 
-                except FailedHook.DoesNotExist:
+                else:
+                    send_mail = True    #TODO: Consider not sending it on the first go
                     FailedHook.objects.create(
                         target=r.request.url,
                         payload=payload,
                         response_headers={k: r.headers[k]
                                           for k in r.headers.iterkeys()},
-                        response_body=r.content,
+                        response_body=r.content,    # TODO: Test what happens when there is no response, e.g. with SSLError
                         last_status=r.status_code,
                         event=hook_event,
                         user_id=hook_user_id,
                         hook_id=hook_id
                     )
-            elif cleanup:
-                FailedHook.objects.filter(target=r.request.url,
-                                          event=F('hook__event'),
-                                          user_id=F('hook__user_id'),
-                                          hook_id=hook_id).delete()
 
-            self.total_sent += 1
+                if send_mail and getattr(settings, 'HOOK_EXCEPTION_MAILER', None):
+                    if 'data' in kwargs:
+                        kwargs['data'] = json.loads(kwargs['data'])
+                    extra_body = { 'webhook': kwargs }
+
+                    if r is not None:
+                        extra_body['response'] = {
+                            'status_code': r.status_code,
+                            'url': r.url,
+                            'reason': r.reason,
+                            'content': r.content,
+                        }
+
+                    mailer = get_module(settings.HOOK_EXCEPTION_MAILER)
+                    mailer('Error sending webhook', request=None, exception=e, extra_body=extra_body)
 
 
 client = Client()
 
 
-def retry(target, payload, instance=None, hook=None, cleanup=False, **kwargs):
+def retry(target, payload, instance=None, hook=None, failed_hook=None, **kwargs):
+    event = hook.event
+    if isinstance(payload, basestring):
+        payload_dict = json.loads(payload)
+        if 'hook' in payload_dict and 'event' in payload_dict['hook']:
+            event = payload_dict['hook']['event']
+
     client.post(
         url=target,
-        data=json.dumps(payload) if not isinstance(payload, basestring) else
-             payload,
+        data=json.dumps(payload, cls=DjangoJSONEncoder) if not isinstance(payload, basestring) else payload,
         headers={'Content-Type': 'application/json'},
         _hook_id=hook.pk,
-        _hook_event=hook.event,
+        _hook_event=event,
         _hook_user_id=hook.user.pk,
-        _cleanup=cleanup
+        _failed_hook=failed_hook
     )

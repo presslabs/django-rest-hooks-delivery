@@ -2,3 +2,10 @@
 Initial release
 
 * simple retry deliverer
+
+=== 0.3.0 ===
+Enhancements
+
+* add backoff algorithm,
+* send email on final attempt
+* allow multiple failed instances per hook (by tying it to the model instance, not the hook)
