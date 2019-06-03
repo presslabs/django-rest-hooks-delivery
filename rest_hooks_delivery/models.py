@@ -18,7 +18,7 @@ class FailedHook(models.Model):
                              choices=[(e, e) for e in
                                       sorted(HOOK_EVENTS.keys())],
                              editable=False)
-    user = models.ForeignKey(AUTH_USER_MODEL, editable=False)
+    user = models.ForeignKey(AUTH_USER_MODEL, editable=False, on_delete=models.PROTECT)
     payload = models.TextField(editable=False)
     response_headers = models.TextField(editable=False, max_length=65535)
     response_body = models.TextField(editable=False, max_length=65535)
@@ -27,7 +27,7 @@ class FailedHook(models.Model):
     retries = models.PositiveIntegerField(editable=False, db_index=True,
                                           default=1)
 
-    hook = models.ForeignKey('rest_hooks.Hook', editable=False)
+    hook = models.ForeignKey('rest_hooks.Hook', editable=False, on_delete=models.PROTECT)
 
     def __unicode__(self):
         return u'%s [%d]' % (self.target, self.last_status)
