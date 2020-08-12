@@ -27,8 +27,8 @@ class FailedHook(models.Model):
 
     hook = models.ForeignKey('rest_hooks.Hook', editable=False, on_delete=models.PROTECT)
 
-    def __unicode__(self):
-        return '%s [%d]' % (self.target, self.last_status)
+    def __str__(self):
+        return '{} [{}]'.format(self.target, self.last_status)
 
     class Meta:
         ordering = ('-last_retry',)

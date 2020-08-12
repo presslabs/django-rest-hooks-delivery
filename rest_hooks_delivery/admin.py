@@ -54,8 +54,8 @@ retry_hook.short_description = "Retry selected failed hooks"
 
 
 class FailedHookAdmin(admin.ModelAdmin):
-    list_display = ('__unicode__', 'event', 'user', 'last_status',
-                    'last_retry', 'retries', 'valid', 'hook')
+    list_display = ('__str__', 'event', 'user', 'last_status',
+                    'last_retry', 'retries', 'valid', 'hook_detail')
     list_filter = (UserFilter, 'event')
     readonly_fields = ('target', 'event', 'user', 'last_status', 'last_retry',
                        'retries', 'payload', 'response_headers',
@@ -82,6 +82,13 @@ class FailedHookAdmin(admin.ModelAdmin):
 
         return admin.actions.delete_selected(self, request, queryset)
     delete_selected.short_description = "Delete selected failed hooks"
+
+    def hook_detail(self, obj):
+        try:
+            return obj.hook.__unicode__()
+        except AttributeError:
+            return obj.hook
+    hook_detail.short_description = 'Hook'
 
     def valid(self, obj):
         if not obj.user.pk == obj.hook.user.pk:
