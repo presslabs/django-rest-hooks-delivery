@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-# vim: ft=python:sw=4:ts=4:sts=4:et:
 import json
 
 from datetime import timedelta
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import F
 from django.utils.timezone import now
 from rest_hooks.utils import get_module
 

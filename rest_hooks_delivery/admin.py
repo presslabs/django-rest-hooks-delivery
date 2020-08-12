@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# vim: ft=python:sw=4:ts=4:sts=4:et:
 from django.conf import settings
 from django.contrib import admin, messages
 from django.db.models import F
@@ -18,7 +16,7 @@ class UserFilter(admin.SimpleListFilter):
             return [(request.user.id, request.user.username),]
 
         user_ids = FailedHook.objects.all().values_list('user').distinct()
-        AuthUserModel = FailedHook._meta.get_field('user').rel.to
+        AuthUserModel = FailedHook._meta.get_field('user').remote_field.model
         users = AuthUserModel.objects.filter(id__in=user_ids).order_by('-is_active', 'username')
 
         return [(user.id, user.username if user.is_active else "%s (Inactive)" % user.username) for user in users]
@@ -63,7 +61,10 @@ class FailedHookAdmin(admin.ModelAdmin):
                        'retries', 'payload', 'response_headers',
                        'response_body')
 
-    actions = ['delete_selected', retry_hook]
+    #actions = ['delete_selected', retry_hook]
+    # ERRORS:
+    # <class 'rest_hooks_delivery.admin.FailedHookAdmin'>: (admin.E130) __name__ attributes of actions defined in <class 'rest_hooks_delivery.admin.FailedHookAdmin'> must be unique.
+    actions = [retry_hook] # https://docs.djangoproject.com/en/2.2/releases/2.2/#admin-actions-are-no-longer-collected-from-base-modeladmin-classes
 
     def has_add_permission(self, request):
         return False

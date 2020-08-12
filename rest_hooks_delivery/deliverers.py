@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# vim: ft=python:sw=4:ts=4:sts=4:et:
 import collections
 import json
 import threading
@@ -84,7 +82,7 @@ class Client(object):
                             r.raise_for_status()
 
                         failed_hook.response_headers = {k: r.headers[k] for k in
-                                                        r.headers.iterkeys()}
+                                                        r.headers.keys()}
                         failed_hook.response_body = r.content
                         failed_hook.last_status = r.status_code
                         failed_hook.retries = F('retries') + 1
@@ -95,7 +93,7 @@ class Client(object):
                             target=r.request.url,
                             payload=payload,
                             response_headers={k: r.headers[k]
-                                              for k in r.headers.iterkeys()},
+                                              for k in r.headers.keys()},
                             response_body=r.content,
                             last_status=r.status_code,
                             event=hook_event,
@@ -117,7 +115,7 @@ class Client(object):
                 if failed_hook:
                     send_mail = failed_hook.retries == 5
                     failed_hook.response_headers = {k: r.headers[k] for k in
-                                                    r.headers.iterkeys()}
+                                                    r.headers.keys()}
                     failed_hook.response_body = r.content
                     failed_hook.last_status = r.status_code
                     failed_hook.retries = F('retries') + 1
@@ -129,7 +127,7 @@ class Client(object):
                         target=r.request.url,
                         payload=payload,
                         response_headers={k: r.headers[k]
-                                          for k in r.headers.iterkeys()},
+                                          for k in r.headers.keys()},
                         response_body=r.content,    # TODO: Test what happens when there is no response, e.g. with SSLError
                         last_status=r.status_code,
                         event=hook_event,
@@ -159,14 +157,14 @@ client = Client()
 
 def retry(target, payload, instance=None, hook=None, failed_hook=None, **kwargs):
     event = hook.event
-    if isinstance(payload, basestring):
+    if isinstance(payload, str):
         payload_dict = json.loads(payload)
         if 'hook' in payload_dict and 'event' in payload_dict['hook']:
             event = payload_dict['hook']['event']
 
     client.post(
         url=target,
-        data=json.dumps(payload, cls=DjangoJSONEncoder) if not isinstance(payload, basestring) else payload,
+        data=json.dumps(payload, cls=DjangoJSONEncoder) if not isinstance(payload, str) else payload,
         headers={'Content-Type': 'application/json'},
         _hook_id=hook.pk,
         _hook_event=event,

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# vim: ft=python:sw=4:ts=4:sts=4:et:
 from django.conf import settings
 from django.db import models
 
@@ -30,7 +28,7 @@ class FailedHook(models.Model):
     hook = models.ForeignKey('rest_hooks.Hook', editable=False, on_delete=models.PROTECT)
 
     def __unicode__(self):
-        return u'%s [%d]' % (self.target, self.last_status)
+        return '%s [%d]' % (self.target, self.last_status)
 
     class Meta:
         ordering = ('-last_retry',)

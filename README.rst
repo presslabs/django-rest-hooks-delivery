@@ -7,7 +7,7 @@ Various deliverers for `django rest hooks
 
 Forked from `presslabs/django-rest-hooks-delivery
 <https://github.com/presslabs/django-rest-hooks-delivery>`_ to add backoff algorithm,
-emails on final attempt, and to allow multiple failed instances per hook (by typing it 
+emails on final attempt, and to allow multiple failed instances per hook (by tying it 
 to the model instance, not the hook).
 
 Installation
@@ -17,7 +17,7 @@ To get the latest commit from GitHub
 
 .. code-block:: bash
 
-    pip install -e git+git://github.com/CompostNow/django-rest-hooks-delivery.git#egg=rest_hooks_delivery
+    pip install -e git+git://github.com/CompostNow/django-rest-hooks-delivery.git#egg=django-rest-hooks-delivery
 
 Add ``rest_hooks_delivery`` to your ``INSTALLED_APPS``
 
@@ -27,14 +27,6 @@ Add ``rest_hooks_delivery`` to your ``INSTALLED_APPS``
         ...,
         'rest_hooks_delivery',
     )
-
-Don't forget to migrate your database
-
-.. code-block:: bash
-
-    ./manage.py migrate rest_hooks_delivery # if you are using django > 1.7
-
-    ./manage.py syncdb rest_hooks_delivery # if you are using django < 1.7
 
 
 Usage
