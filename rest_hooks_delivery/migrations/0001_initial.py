@@ -22,8 +22,8 @@ class Migration(migrations.Migration):
                 ('response_body', models.TextField(max_length=65535, editable=False)),
                 ('last_status', models.PositiveSmallIntegerField(editable=False, db_index=True)),
                 ('retries', models.PositiveIntegerField(default=1, editable=False, db_index=True)),
-                ('hook', models.ForeignKey(editable=False, to='rest_hooks.Hook')),
-                ('user', models.ForeignKey(editable=False, to=settings.AUTH_USER_MODEL)),
+                ('hook', models.ForeignKey(editable=False, to='rest_hooks.Hook', on_delete=models.PROTECT)),
+                ('user', models.ForeignKey(editable=False, to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT)),
             ],
             options={
                 'ordering': ('-last_retry',),
