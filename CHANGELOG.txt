@@ -9,3 +9,8 @@ Enhancements
 * add backoff algorithm,
 * send email on final attempt
 * allow multiple failed instances per hook (by tying it to the model instance, not the hook)
+
+=== 0.3.1 ===
+
+* Python3+ and Django2+ support
+* manually handle hook validation
