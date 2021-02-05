@@ -12,10 +12,7 @@ class FailedHook(models.Model):
                                       db_index=True)
     target = models.URLField('original target URL', max_length=255,
                              editable=False, db_index=True)
-    event = models.CharField(max_length=64, db_index=True,
-                             choices=[(e, e) for e in
-                                      sorted(HOOK_EVENTS.keys())],
-                             editable=False)
+    event = models.CharField(max_length=64, db_index=True, editable=False)
     user = models.ForeignKey(AUTH_USER_MODEL, editable=False, on_delete=models.PROTECT)
     payload = models.TextField(editable=False)
     response_headers = models.TextField(editable=False, max_length=65535)
@@ -32,3 +29,10 @@ class FailedHook(models.Model):
 
     class Meta:
         ordering = ('-last_retry',)
+    
+    def clean(self):
+        """ Validation for events. """
+        if self.event not in HOOK_EVENTS.keys():
+            raise ValidationError(
+                "Invalid hook event {evt}.".format(evt=self.event)
+            )
